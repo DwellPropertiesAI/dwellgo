@@ -10,8 +10,8 @@ import (
 	"dwell/internal/config"
 	"dwell/internal/domain"
 
+	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
-	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
 	"github.com/google/uuid"
 )
 
@@ -37,10 +37,10 @@ type AIQueryResponse struct {
 }
 
 type ClaudeRequest struct {
-	AnthropicVersion string   `json:"anthropic_version"`
-	MaxTokens        int      `json:"max_tokens"`
+	AnthropicVersion string    `json:"anthropic_version"`
+	MaxTokens        int       `json:"max_tokens"`
 	Messages         []Message `json:"messages"`
-	System          string   `json:"system"`
+	System           string    `json:"system"`
 }
 
 type Message struct {
@@ -99,9 +99,9 @@ func (s *AIService) QueryAI(ctx context.Context, req *AIQueryRequest) (*AIQueryR
 
 	// Call Bedrock
 	invokeInput := &bedrockruntime.InvokeModelInput{
-		ModelId:     aws.String(s.config.AWS.Bedrock.Model),
+		ModelId:     awssdk.String(s.config.AWS.Bedrock.Model),
 		Body:        requestBody,
-		ContentType: aws.String("application/json"),
+		ContentType: awssdk.String("application/json"),
 	}
 
 	result, err := s.awsClients.GetBedrockClient().InvokeModel(ctx, invokeInput)
@@ -133,7 +133,9 @@ func (s *AIService) QueryAI(ctx context.Context, req *AIQueryRequest) (*AIQueryR
 		}
 	}
 
-	aiMessage := &domain.AIChatMessage{
+	// TODO: Save AI message to database
+	// This would typically be done through a repository layer
+	_ = &domain.AIChatMessage{
 		LandlordID: landlordID,
 		TenantID:   tenantID,
 		UserType:   req.UserType,
@@ -143,9 +145,6 @@ func (s *AIService) QueryAI(ctx context.Context, req *AIQueryRequest) (*AIQueryR
 		TokensUsed: claudeResp.Usage.InputTokens + claudeResp.Usage.OutputTokens,
 		Cost:       cost,
 	}
-
-	// TODO: Save AI message to database
-	// This would typically be done through a repository layer
 
 	return &AIQueryResponse{
 		Answer:     answer,
@@ -221,7 +220,7 @@ func (s *AIService) calculateCost(inputTokens, outputTokens int) float64 {
 // GetPropertyManagementTips returns AI-generated tips for property management
 func (s *AIService) GetPropertyManagementTips(ctx context.Context, landlordID string, category string) ([]string, error) {
 	question := fmt.Sprintf("Provide 5 practical tips for %s in property management. Keep each tip concise and actionable.", category)
-	
+
 	req := &AIQueryRequest{
 		Question:   question,
 		UserType:   "landlord",
@@ -244,14 +243,14 @@ func (s *AIService) parseTipsFromResponse(response string) []string {
 	// Simple parsing - look for numbered or bulleted items
 	lines := strings.Split(response, "\n")
 	var tips []string
-	
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		// Look for lines that start with numbers, bullets, or dashes
 		if (len(line) > 2 && (line[0] >= '1' && line[0] <= '9')) ||
-		   strings.HasPrefix(line, "- ") ||
-		   strings.HasPrefix(line, "• ") ||
-		   strings.HasPrefix(line, "* ") {
+			strings.HasPrefix(line, "- ") ||
+			strings.HasPrefix(line, "• ") ||
+			strings.HasPrefix(line, "* ") {
 			tip := strings.TrimPrefix(line, "- ")
 			tip = strings.TrimPrefix(tip, "• ")
 			tip = strings.TrimPrefix(tip, "* ")
@@ -266,12 +265,11 @@ func (s *AIService) parseTipsFromResponse(response string) []string {
 			}
 		}
 	}
-	
+
 	// If no structured tips found, return the whole response as one tip
 	if len(tips) == 0 && response != "" {
 		tips = []string{response}
 	}
-	
+
 	return tips
 }
-

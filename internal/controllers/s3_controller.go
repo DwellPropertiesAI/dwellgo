@@ -243,7 +243,7 @@ func (c *S3Controller) ListFiles(ctx *gin.Context) {
 // @Router /files/signed-url [get]
 func (c *S3Controller) GetSignedURL(ctx *gin.Context) {
 	// Get user information from context
-	userClaims, exists := middleware.GetUserClaimsFromContext(ctx)
+	_, exists := middleware.GetUserClaimsFromContext(ctx)
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, ErrorResponse{
 			Error:   "User not authenticated",
@@ -307,7 +307,7 @@ func (c *S3Controller) GetSignedURL(ctx *gin.Context) {
 // @Router /files/metadata [get]
 func (c *S3Controller) GetFileMetadata(ctx *gin.Context) {
 	// Get user information from context
-	userClaims, exists := middleware.GetUserClaimsFromContext(ctx)
+	_, exists := middleware.GetUserClaimsFromContext(ctx)
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, ErrorResponse{
 			Error:   "User not authenticated",

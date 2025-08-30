@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -11,10 +10,11 @@ import (
 	"dwell/internal/config"
 	"dwell/internal/domain"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
+	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ses"
 	"github.com/aws/aws-sdk-go-v2/service/ses/types"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
+	snstypes "github.com/aws/aws-sdk-go-v2/service/sns/types"
 	"github.com/google/uuid"
 )
 
@@ -24,17 +24,17 @@ type NotificationService struct {
 }
 
 type NotificationRequest struct {
-	Type            string     `json:"type" binding:"required"`
-	Title           string     `json:"title" binding:"required"`
-	Message         string     `json:"message" binding:"required"`
-	LandlordID      string     `json:"landlord_id" binding:"required"`
-	RecipientID     string     `json:"recipient_id" binding:"required"`
-	RecipientType   string     `json:"recipient_type" binding:"required,oneof=landlord tenant contractor"`
-	RecipientEmail  string     `json:"recipient_email" binding:"required,email"`
-	RecipientPhone  string     `json:"recipient_phone,omitempty"`
-	RelatedEntityID *uuid.UUID `json:"related_entity_id,omitempty"`
-	RelatedEntityType string   `json:"related_entity_type,omitempty"`
-	Priority        string     `json:"priority,omitempty"` // low, medium, high, urgent
+	Type              string     `json:"type" binding:"required"`
+	Title             string     `json:"title" binding:"required"`
+	Message           string     `json:"message" binding:"required"`
+	LandlordID        string     `json:"landlord_id" binding:"required"`
+	RecipientID       string     `json:"recipient_id" binding:"required"`
+	RecipientType     string     `json:"recipient_type" binding:"required,oneof=landlord tenant contractor"`
+	RecipientEmail    string     `json:"recipient_email" binding:"required,email"`
+	RecipientPhone    string     `json:"recipient_phone,omitempty"`
+	RelatedEntityID   *uuid.UUID `json:"related_entity_id,omitempty"`
+	RelatedEntityType string     `json:"related_entity_type,omitempty"`
+	Priority          string     `json:"priority,omitempty"` // low, medium, high, urgent
 }
 
 type NotificationResponse struct {
@@ -45,14 +45,14 @@ type NotificationResponse struct {
 }
 
 type EmailTemplate struct {
-	Subject     string            `json:"subject"`
-	HTMLBody    string            `json:"html_body"`
-	TextBody    string            `json:"text_body"`
-	Variables   map[string]string `json:"variables"`
+	Subject   string            `json:"subject"`
+	HTMLBody  string            `json:"html_body"`
+	TextBody  string            `json:"text_body"`
+	Variables map[string]string `json:"variables"`
 }
 
 type SMSTemplate struct {
-	Message string            `json:"message"`
+	Message   string            `json:"message"`
 	Variables map[string]string `json:"variables"`
 }
 
@@ -66,7 +66,7 @@ func NewNotificationService(awsClients *aws.Clients, config *config.Config) *Not
 // SendNotification sends a notification through the appropriate channel
 func (s *NotificationService) SendNotification(ctx context.Context, req *NotificationRequest) (*NotificationResponse, error) {
 	// Create notification record
-	notification := &domain.Notification{
+	_ = &domain.Notification{
 		LandlordID:        uuid.MustParse(req.LandlordID),
 		RecipientID:       uuid.MustParse(req.RecipientID),
 		RecipientType:     req.RecipientType,
@@ -108,7 +108,7 @@ func (s *NotificationService) SendNotification(ctx context.Context, req *Notific
 func (s *NotificationService) sendEmailNotification(ctx context.Context, req *NotificationRequest) (*NotificationResponse, error) {
 	// Get email template
 	template := s.getEmailTemplate(req.Type, req)
-	
+
 	// Replace variables in template
 	subject := s.replaceVariables(template.Subject, template.Variables)
 	htmlBody := s.replaceVariables(template.HTMLBody, template.Variables)
@@ -116,23 +116,23 @@ func (s *NotificationService) sendEmailNotification(ctx context.Context, req *No
 
 	// Prepare SES email input
 	emailInput := &ses.SendEmailInput{
-		Source: aws.String(s.config.AWS.SES.FromEmail),
+		Source: awssdk.String(s.config.AWS.SES.FromEmail),
 		Destination: &types.Destination{
 			ToAddresses: []string{req.RecipientEmail},
 		},
 		Message: &types.Message{
 			Subject: &types.Content{
-				Data:    aws.String(subject),
-				Charset: aws.String("UTF-8"),
+				Data:    awssdk.String(subject),
+				Charset: awssdk.String("UTF-8"),
 			},
 			Body: &types.Body{
 				Html: &types.Content{
-					Data:    aws.String(htmlBody),
-					Charset: aws.String("UTF-8"),
+					Data:    awssdk.String(htmlBody),
+					Charset: awssdk.String("UTF-8"),
 				},
 				Text: &types.Content{
-					Data:    aws.String(textBody),
-					Charset: aws.String("UTF-8"),
+					Data:    awssdk.String(textBody),
+					Charset: awssdk.String("UTF-8"),
 				},
 			},
 		},
@@ -160,18 +160,18 @@ func (s *NotificationService) sendSMSNotification(ctx context.Context, req *Noti
 
 	// Get SMS template
 	template := s.getSMSTemplate(req.Type, req)
-	
+
 	// Replace variables in template
 	message := s.replaceVariables(template.Message, template.Variables)
 
 	// Prepare SNS SMS input
 	smsInput := &sns.PublishInput{
-		Message:     aws.String(message),
-		PhoneNumber: aws.String(req.RecipientPhone),
-		MessageAttributes: map[string]types.MessageAttributeValue{
+		Message:     awssdk.String(message),
+		PhoneNumber: awssdk.String(req.RecipientPhone),
+		MessageAttributes: map[string]snstypes.MessageAttributeValue{
 			"AWS.SNS.SMS.SMSType": {
-				DataType:    aws.String("String"),
-				StringValue: aws.String("Transactional"),
+				DataType:    awssdk.String("String"),
+				StringValue: awssdk.String("Transactional"),
 			},
 		},
 	}
@@ -401,17 +401,17 @@ func (s *NotificationService) getSMSTemplate(notificationType string, req *Notif
 	switch notificationType {
 	case "maintenance_emergency":
 		return &SMSTemplate{
-			Message: "URGENT: Emergency maintenance request at {{property_name}}. Please respond immediately.",
+			Message:   "URGENT: Emergency maintenance request at {{property_name}}. Please respond immediately.",
 			Variables: variables,
 		}
 	case "payment_overdue":
 		return &SMSTemplate{
-			Message: "Payment overdue: ${{amount}} due for {{property_name}}. Please contact us immediately.",
+			Message:   "Payment overdue: ${{amount}} due for {{property_name}}. Please contact us immediately.",
 			Variables: variables,
 		}
 	default:
 		return &SMSTemplate{
-			Message: "{{title}}: {{message}}",
+			Message:   "{{title}}: {{message}}",
 			Variables: variables,
 		}
 	}
@@ -430,7 +430,7 @@ func (s *NotificationService) replaceVariables(template string, variables map[st
 // SendBulkNotifications sends notifications to multiple recipients
 func (s *NotificationService) SendBulkNotifications(ctx context.Context, requests []NotificationRequest) ([]NotificationResponse, error) {
 	var responses []NotificationResponse
-	
+
 	for _, req := range requests {
 		resp, err := s.SendNotification(ctx, &req)
 		if err != nil {
@@ -440,24 +440,24 @@ func (s *NotificationService) SendBulkNotifications(ctx context.Context, request
 		}
 		responses = append(responses, *resp)
 	}
-	
+
 	return responses, nil
 }
 
 // SendMaintenanceNotification sends a notification about a maintenance request
 func (s *NotificationService) SendMaintenanceNotification(ctx context.Context, maintenanceReq *domain.MaintenanceRequest, recipientType, recipientEmail, recipientPhone string) error {
 	req := &NotificationRequest{
-		Type:           "maintenance_request",
-		Title:          maintenanceReq.Title,
-		Message:        maintenanceReq.Description,
-		LandlordID:     maintenanceReq.LandlordID.String(),
-		RecipientID:    maintenanceReq.TenantID.String(), // This would need to be adjusted based on recipient
-		RecipientType:  recipientType,
-		RecipientEmail: recipientEmail,
-		RecipientPhone: recipientPhone,
-		RelatedEntityID: &maintenanceReq.ID,
+		Type:              "maintenance_request",
+		Title:             maintenanceReq.Title,
+		Message:           maintenanceReq.Description,
+		LandlordID:        maintenanceReq.LandlordID.String(),
+		RecipientID:       maintenanceReq.TenantID.String(), // This would need to be adjusted based on recipient
+		RecipientType:     recipientType,
+		RecipientEmail:    recipientEmail,
+		RecipientPhone:    recipientPhone,
+		RelatedEntityID:   &maintenanceReq.ID,
 		RelatedEntityType: "maintenance_request",
-		Priority:       maintenanceReq.Priority,
+		Priority:          maintenanceReq.Priority,
 	}
 
 	_, err := s.SendNotification(ctx, req)
@@ -467,20 +467,19 @@ func (s *NotificationService) SendMaintenanceNotification(ctx context.Context, m
 // SendPaymentNotification sends a notification about payment
 func (s *NotificationService) SendPaymentNotification(ctx context.Context, payment *domain.Payment, recipientType, recipientEmail, recipientPhone string) error {
 	req := &NotificationRequest{
-		Type:           "payment_due",
-		Title:          "Payment Due",
-		Message:        fmt.Sprintf("Payment of $%.2f is due for your property", payment.Amount),
-		LandlordID:     payment.LandlordID.String(),
-		RecipientID:    payment.TenantID.String(),
-		RecipientType:  recipientType,
-		RecipientEmail: recipientEmail,
-		RecipientPhone: recipientPhone,
-		RelatedEntityID: &payment.ID,
+		Type:              "payment_due",
+		Title:             "Payment Due",
+		Message:           fmt.Sprintf("Payment of $%.2f is due for your property", payment.Amount),
+		LandlordID:        payment.LandlordID.String(),
+		RecipientID:       payment.TenantID.String(),
+		RecipientType:     recipientType,
+		RecipientEmail:    recipientEmail,
+		RecipientPhone:    recipientPhone,
+		RelatedEntityID:   &payment.ID,
 		RelatedEntityType: "payment",
-		Priority:       "medium",
+		Priority:          "medium",
 	}
 
 	_, err := s.SendNotification(ctx, req)
 	return err
 }
-

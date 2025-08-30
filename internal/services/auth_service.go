@@ -9,6 +9,7 @@ import (
 	"dwell/internal/config"
 	"dwell/internal/domain"
 
+	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider/types"
 	"github.com/golang-jwt/jwt/v5"
@@ -62,33 +63,33 @@ func NewAuthService(awsClients *aws.Clients, config *config.Config) *AuthService
 func (s *AuthService) SignUp(ctx context.Context, req *SignUpRequest) (*SignUpResponse, error) {
 	// Prepare Cognito signup request
 	signUpInput := &cognitoidentityprovider.SignUpInput{
-		ClientId: aws.String(s.config.AWS.Cognito.ClientID),
-		Username: aws.String(req.Email),
-		Password: aws.String(req.Password),
+		ClientId: awssdk.String(s.config.AWS.Cognito.ClientID),
+		Username: awssdk.String(req.Email),
+		Password: awssdk.String(req.Password),
 		UserAttributes: []types.AttributeType{
 			{
-				Name:  aws.String("email"),
-				Value: aws.String(req.Email),
+				Name:  awssdk.String("email"),
+				Value: awssdk.String(req.Email),
 			},
 			{
-				Name:  aws.String("given_name"),
-				Value: aws.String(req.FirstName),
+				Name:  awssdk.String("given_name"),
+				Value: awssdk.String(req.FirstName),
 			},
 			{
-				Name:  aws.String("family_name"),
-				Value: aws.String(req.LastName),
+				Name:  awssdk.String("family_name"),
+				Value: awssdk.String(req.LastName),
 			},
 			{
-				Name:  aws.String("phone_number"),
-				Value: aws.String(req.Phone),
+				Name:  awssdk.String("phone_number"),
+				Value: awssdk.String(req.Phone),
 			},
 			{
-				Name:  aws.String("custom:user_type"),
-				Value: aws.String(req.UserType),
+				Name:  awssdk.String("custom:user_type"),
+				Value: awssdk.String(req.UserType),
 			},
 			{
-				Name:  aws.String("custom:company_name"),
-				Value: aws.String(req.CompanyName),
+				Name:  awssdk.String("custom:company_name"),
+				Value: awssdk.String(req.CompanyName),
 			},
 		},
 	}
@@ -110,9 +111,9 @@ func (s *AuthService) SignUp(ctx context.Context, req *SignUpRequest) (*SignUpRe
 // ConfirmSignUp confirms user registration with confirmation code
 func (s *AuthService) ConfirmSignUp(ctx context.Context, email, confirmationCode string) error {
 	confirmInput := &cognitoidentityprovider.ConfirmSignUpInput{
-		ClientId:         aws.String(s.config.AWS.Cognito.ClientID),
-		Username:         aws.String(email),
-		ConfirmationCode: aws.String(confirmationCode),
+		ClientId:         awssdk.String(s.config.AWS.Cognito.ClientID),
+		Username:         awssdk.String(email),
+		ConfirmationCode: awssdk.String(confirmationCode),
 	}
 
 	_, err := s.awsClients.GetCognitoClient().ConfirmSignUp(ctx, confirmInput)
@@ -127,7 +128,7 @@ func (s *AuthService) ConfirmSignUp(ctx context.Context, email, confirmationCode
 func (s *AuthService) SignIn(ctx context.Context, req *AuthRequest) (*AuthResponse, error) {
 	// Prepare Cognito signin request
 	authInput := &cognitoidentityprovider.InitiateAuthInput{
-		ClientId: aws.String(s.config.AWS.Cognito.ClientID),
+		ClientId: awssdk.String(s.config.AWS.Cognito.ClientID),
 		AuthFlow: types.AuthFlowTypeUserPasswordAuth,
 		AuthParameters: map[string]string{
 			"USERNAME": req.Email,
@@ -144,7 +145,7 @@ func (s *AuthService) SignIn(ctx context.Context, req *AuthRequest) (*AuthRespon
 	// Extract tokens and user info
 	accessToken := *result.AuthenticationResult.AccessToken
 	refreshToken := *result.AuthenticationResult.RefreshToken
-	expiresIn := int(*result.AuthenticationResult.ExpiresIn)
+	expiresIn := int(result.AuthenticationResult.ExpiresIn)
 
 	// Get user attributes to determine user type
 	userInfo, err := s.getUserInfo(ctx, accessToken)
@@ -165,7 +166,7 @@ func (s *AuthService) SignIn(ctx context.Context, req *AuthRequest) (*AuthRespon
 // RefreshToken refreshes the access token using refresh token
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*AuthResponse, error) {
 	authInput := &cognitoidentityprovider.InitiateAuthInput{
-		ClientId: aws.String(s.config.AWS.Cognito.ClientID),
+		ClientId: awssdk.String(s.config.AWS.Cognito.ClientID),
 		AuthFlow: types.AuthFlowTypeRefreshTokenAuth,
 		AuthParameters: map[string]string{
 			"REFRESH_TOKEN": refreshToken,
@@ -178,7 +179,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*A
 	}
 
 	accessToken := *result.AuthenticationResult.AccessToken
-	expiresIn := int(*result.AuthenticationResult.ExpiresIn)
+	expiresIn := int(result.AuthenticationResult.ExpiresIn)
 
 	// Get user info from the new access token
 	userInfo, err := s.getUserInfo(ctx, accessToken)
@@ -198,7 +199,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*A
 // SignOut signs out the user
 func (s *AuthService) SignOut(ctx context.Context, accessToken string) error {
 	signOutInput := &cognitoidentityprovider.GlobalSignOutInput{
-		AccessToken: aws.String(accessToken),
+		AccessToken: awssdk.String(accessToken),
 	}
 
 	_, err := s.awsClients.GetCognitoClient().GlobalSignOut(ctx, signOutInput)
@@ -249,7 +250,7 @@ func (s *AuthService) ValidateToken(tokenString string) (*domain.UserClaims, err
 // getUserInfo retrieves user information from Cognito
 func (s *AuthService) getUserInfo(ctx context.Context, accessToken string) (*domain.UserInfo, error) {
 	getUserInput := &cognitoidentityprovider.GetUserInput{
-		AccessToken: aws.String(accessToken),
+		AccessToken: awssdk.String(accessToken),
 	}
 
 	result, err := s.awsClients.GetCognitoClient().GetUser(ctx, getUserInput)
@@ -277,4 +278,3 @@ func (s *AuthService) getUserInfo(ctx context.Context, accessToken string) (*dom
 
 	return userInfo, nil
 }
-

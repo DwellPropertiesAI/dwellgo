@@ -7,7 +7,7 @@ import (
 	"dwell/internal/config"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
+	awssdkconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -25,9 +25,9 @@ type Clients struct {
 
 func NewClients(cfg *config.AWSConfig) (*Clients, error) {
 	// Load AWS configuration
-	awsCfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion(cfg.Region),
-		config.WithCredentialsProvider(aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
+	awsCfg, err := awssdkconfig.LoadDefaultConfig(context.TODO(),
+		awssdkconfig.WithRegion(cfg.Region),
+		awssdkconfig.WithCredentialsProvider(aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
 			return aws.Credentials{
 				AccessKeyID:     cfg.AccessKeyID,
 				SecretAccessKey: cfg.SecretAccessKey,
@@ -86,4 +86,3 @@ func (c *Clients) GetSNSClient() *sns.Client {
 func (c *Clients) GetSESClient() *ses.Client {
 	return c.SES
 }
-

@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"testing"
 
 	"dwell/internal/aws"
@@ -234,4 +233,3 @@ func TestAuthService_UserTypeValidation(t *testing.T) {
 		})
 	}
 }
-

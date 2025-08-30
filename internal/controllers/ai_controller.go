@@ -162,7 +162,7 @@ func (c *AIController) GetPropertyManagementTips(ctx *gin.Context) {
 // @Router /ai/history [get]
 func (c *AIController) GetAIChatHistory(ctx *gin.Context) {
 	// Get user information from context
-	userClaims, exists := middleware.GetUserClaimsFromContext(ctx)
+	_, exists := middleware.GetUserClaimsFromContext(ctx)
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, ErrorResponse{
 			Error:   "User not authenticated",
@@ -172,8 +172,8 @@ func (c *AIController) GetAIChatHistory(ctx *gin.Context) {
 	}
 
 	// Get query parameters
-	limit := ctx.DefaultQuery("limit", "50")
-	offset := ctx.DefaultQuery("offset", "0")
+	_ = ctx.DefaultQuery("limit", "50")
+	_ = ctx.DefaultQuery("offset", "0")
 
 	// TODO: Implement chat history retrieval from database
 	// This would typically involve a repository layer to fetch AI chat messages
@@ -202,7 +202,7 @@ func (c *AIController) GetAIChatHistory(ctx *gin.Context) {
 // @Router /ai/analytics [get]
 func (c *AIController) GetAIAnalytics(ctx *gin.Context) {
 	// Get user information from context
-	userClaims, exists := middleware.GetUserClaimsFromContext(ctx)
+	_, exists := middleware.GetUserClaimsFromContext(ctx)
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, ErrorResponse{
 			Error:   "User not authenticated",
@@ -244,12 +244,11 @@ type AIChatHistoryResponse struct {
 }
 
 type AIAnalyticsResponse struct {
-	Period        string            `json:"period"`
-	TotalQueries  int               `json:"total_queries"`
-	TotalTokens   int               `json:"total_tokens"`
-	TotalCost     float64           `json:"total_cost"`
-	AverageTokens int               `json:"average_tokens"`
-	PopularTopics []string          `json:"popular_topics"`
-	UsageByDay    map[string]int    `json:"usage_by_day"`
+	Period        string         `json:"period"`
+	TotalQueries  int            `json:"total_queries"`
+	TotalTokens   int            `json:"total_tokens"`
+	TotalCost     float64        `json:"total_cost"`
+	AverageTokens int            `json:"average_tokens"`
+	PopularTopics []string       `json:"popular_topics"`
+	UsageByDay    map[string]int `json:"usage_by_day"`
 }
-

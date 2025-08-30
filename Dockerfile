@@ -1,5 +1,7 @@
 # Multi-stage build for Dwell Property Management API
-FROM golang:1.21-alpine AS builder
+FROM golang:1.25-alpine AS builder
+
+RUN go version
 
 # Install build dependencies
 RUN apk add --no-cache git ca-certificates tzdata
@@ -15,6 +17,9 @@ RUN go mod download
 
 # Copy source code
 COPY . .
+
+# Verify go.mod consistency
+RUN go mod tidy
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o dwell .
