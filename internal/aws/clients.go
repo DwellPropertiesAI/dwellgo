@@ -1,18 +1,18 @@
 package aws
 
 import (
-	"context"
-	"fmt"
+    "context"
+    "fmt"
 
-	"dwell/internal/config"
+    "dwell/internal/config"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	awssdkconfig "github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
-	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/ses"
-	"github.com/aws/aws-sdk-go-v2/service/sns"
+    "github.com/aws/aws-sdk-go-v2/aws"
+    awssdkconfig "github.com/aws/aws-sdk-go-v2/config"
+    "github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
+    "github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
+    "github.com/aws/aws-sdk-go-v2/service/s3"
+    "github.com/aws/aws-sdk-go-v2/service/ses"
+    "github.com/aws/aws-sdk-go-v2/service/sns"
 )
 
 type Clients struct {
@@ -24,19 +24,34 @@ type Clients struct {
 }
 
 func NewClients(cfg *config.AWSConfig) (*Clients, error) {
-	// Load AWS configuration
-	awsCfg, err := awssdkconfig.LoadDefaultConfig(context.TODO(),
-		awssdkconfig.WithRegion(cfg.Region),
-		awssdkconfig.WithCredentialsProvider(aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
-			return aws.Credentials{
-				AccessKeyID:     cfg.AccessKeyID,
-				SecretAccessKey: cfg.SecretAccessKey,
-			}, nil
-		})),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load AWS config: %w", err)
-	}
+    // Load AWS configuration. Prefer the default credentials chain (IAM role, env, profiles).
+    // Only inject static credentials if both AccessKeyID and SecretAccessKey are provided.
+    var (
+        awsCfg aws.Config
+        err    error
+    )
+
+    if cfg.AccessKeyID != "" && cfg.SecretAccessKey != "" {
+        awsCfg, err = awssdkconfig.LoadDefaultConfig(
+            context.TODO(),
+            awssdkconfig.WithRegion(cfg.Region),
+            awssdkconfig.WithCredentialsProvider(aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
+                return aws.Credentials{
+                    AccessKeyID:     cfg.AccessKeyID,
+                    SecretAccessKey: cfg.SecretAccessKey,
+                }, nil
+            })),
+        )
+    } else {
+        awsCfg, err = awssdkconfig.LoadDefaultConfig(
+            context.TODO(),
+            awssdkconfig.WithRegion(cfg.Region),
+        )
+    }
+
+    if err != nil {
+        return nil, fmt.Errorf("failed to load AWS config: %w", err)
+    }
 
 	// Initialize Cognito client
 	cognitoClient := cognitoidentityprovider.NewFromConfig(awsCfg)

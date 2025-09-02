@@ -1,6 +1,6 @@
 # Dwell Property Management API Makefile
 
-.PHONY: help build run test clean docker-build docker-run docker-stop lint format swagger
+.PHONY: help build run test clean docker-build docker-run docker-stop lint format swagger aws-setup aws-test
 
 # Default target
 help:
@@ -31,6 +31,10 @@ help:
 	@echo "Dependencies:"
 	@echo "  deps           - Download Go dependencies"
 	@echo "  deps-update    - Update Go dependencies"
+	@echo ""
+	@echo "AWS Setup:"
+	@echo "  aws-setup      - Run AWS setup script"
+	@echo "  aws-test       - Test AWS services connectivity"
 	@echo ""
 	@echo "Use 'make <command>' to run a specific command"
 
@@ -81,6 +85,23 @@ docker-clean:
 	@echo "Cleaning Docker resources..."
 	@docker-compose down -v
 	@docker system prune -f
+
+# AWS Setup commands
+aws-setup:
+	@echo "Setting up AWS integration..."
+	@if [ "$(OS)" = "Windows_NT" ]; then \
+		powershell -ExecutionPolicy Bypass -File setup_aws.ps1; \
+	else \
+		chmod +x setup_aws.sh && ./setup_aws.sh; \
+	fi
+
+aws-test:
+	@echo "Testing AWS services connectivity..."
+	@if [ "$(OS)" = "Windows_NT" ]; then \
+		powershell -ExecutionPolicy Bypass -File setup_aws.ps1 -SkipTests; \
+	else \
+		chmod +x setup_aws.sh && ./setup_aws.sh; \
+	fi
 
 # Code quality commands
 lint:

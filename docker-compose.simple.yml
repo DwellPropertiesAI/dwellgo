@@ -3,7 +3,7 @@ version: '3.8'
 services:
   dwell-api:
     build: .
-    container_name: dwell-api-prod
+    container_name: dwell-api-simple
     restart: unless-stopped
     ports:
       - "8080:8080"
@@ -24,7 +24,7 @@ services:
         max-size: "10m"
         max-file: "3"
     networks:
-      - dwell-prod-network
+      - dwell-simple-network
     depends_on:
       - postgres
     deploy:
@@ -38,7 +38,7 @@ services:
 
   postgres:
     image: postgres:15-alpine
-    container_name: dwell-postgres-prod
+    container_name: dwell-postgres-simple
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME}
@@ -51,7 +51,7 @@ services:
     ports:
       - "5432:5432"
     networks:
-      - dwell-prod-network
+      - dwell-simple-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 30s
@@ -66,7 +66,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: dwell-redis-prod
+    container_name: dwell-redis-simple
     restart: unless-stopped
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
     volumes:
@@ -74,35 +74,9 @@ services:
     ports:
       - "6379:6379"
     networks:
-      - dwell-prod-network
+      - dwell-simple-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  nginx:
-    image: nginx:alpine
-    container_name: dwell-nginx-prod
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./deploy/nginx/ssl:/etc/nginx/ssl:ro
-      - ./deploy/nginx/logs:/var/log/nginx
-    networks:
-      - dwell-prod-network
-    depends_on:
-      - dwell-api
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -119,9 +93,5 @@ volumes:
     driver: local
 
 networks:
-  dwell-prod-network:
+  dwell-simple-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
-

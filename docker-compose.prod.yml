@@ -12,6 +12,7 @@ services:
     environment:
       - ENVIRONMENT=production
       - SERVER_HOST=0.0.0.0
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
       interval: 30s
@@ -121,7 +122,3 @@ volumes:
 networks:
   dwell-prod-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
-

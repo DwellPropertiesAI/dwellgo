@@ -27,6 +27,11 @@ dist/
 .env.local
 .env.production
 .env.staging
+.env.prod
+.env.backup
+
+# Nginx runtime logs (not for version control)
+deploy/nginx/logs/
 
 # IDE and editor files
 .vscode/
